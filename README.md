@@ -29,8 +29,17 @@ The Survey Application is a simple GUI-based application built with Python and T
 4. Follow the on-screen instructions to fill out the survey and save the data.
 
 ## Screenshots
+### Screen1
+When the application starts up the user will be presented with a screen with the following two options.
+![Image Description](Screen1.png)
 
-Include screenshots of the application in action, demonstrating the data entry screen and the survey results screen.
+### Screen2
+Clicking on the Fill out survey button will take the user to Screen 2.
+![Image Description](screen2.png)
+
+### Screen3
+Clicking theview survey results button will take the user to screen 3(results).
+![Image Description](screen3.png)
 
 ## License
 
