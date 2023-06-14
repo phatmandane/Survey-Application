@@ -249,6 +249,7 @@ def validate_fields():
 
 #---------------------------------------------------------------------------------------------------------------------
 
+
 def view_survey_results():
     # Clear the content frame
     clear_content_frame()
@@ -264,34 +265,61 @@ def view_survey_results():
 
     # Calculate the statistics
     total_surveys = len(survey_data)
-    average_age = sum(data[4] for data in survey_data) / total_surveys
-    oldest_age = max(data[4] for data in survey_data)
-    youngest_age = min(data[4] for data in survey_data)
-    pizza_lovers = sum(data[5] == "Pizza" for data in survey_data)
+    age_sum = 0
+    oldest_age = 0
+    youngest_age = float("inf")
+    pizza_lovers = 0
+    like_to_eat_out_sum = 0
+
+    for data in survey_data:
+        try:
+            age = int(data[4])  # Convert age to integer
+            age_sum += age
+            oldest_age = max(oldest_age, age)
+            youngest_age = min(youngest_age, age)
+            if data[5] == "Pizza":
+                pizza_lovers += 1
+            like_to_eat_out_sum += int(data[6])  # Convert rating to integer
+        except ValueError:
+            # Skip this data entry if the age value is not a valid integer
+            continue
+
+    average_age = age_sum / total_surveys
     pizza_percentage = (pizza_lovers / total_surveys) * 100
-    like_to_eat_out_rating = sum(data[6] for data in survey_data) / total_surveys
+    like_to_eat_out_rating = like_to_eat_out_sum / total_surveys
 
-    # Display the statistics
-    text = f"Total Surveys: {total_surveys}\n"
-    text += f"Average Age: {average_age:.1f}\n"
-    text += f"Oldest Person: {oldest_age}\n"
-    text += f"Youngest Person: {youngest_age}\n"
-    text += f"Percentage of People who like Pizza: {pizza_percentage:.1f}%\n"
-    text += f"People who like to eat out: {like_to_eat_out_rating:.1f}\n"
+    # Create labels to display the survey results
+    label_total_surveys = tk.Label(
+        content_frame, text="Total Surveys: " + str(total_surveys))
+    label_average_age = tk.Label(
+        content_frame, text="Average Age: " + str(round(average_age, 1)))
+    label_oldest_age = tk.Label(
+        content_frame, text="Oldest Person: " + str(oldest_age))
+    label_youngest_age = tk.Label(
+        content_frame, text="Youngest Person: " + str(youngest_age))
+    label_pizza_percentage = tk.Label(
+        content_frame, text="Percentage of People who like Pizza: " + str(round(pizza_percentage, 1)) + "%")
+    label_like_to_eat_out = tk.Label(
+        content_frame, text="People who like to eat out: " + str(round(like_to_eat_out_rating, 1)))
 
-    # Create a text box to display the statistics
-    text_box = tk.Text(content_frame, bg="white", width=60, height=20)
-    text_box.insert(tk.END, text)
-    text_box.pack()
+    # Pack the labels into the content frame
+    label_total_surveys.pack()
+    label_average_age.pack()
+    label_oldest_age.pack()
+    label_youngest_age.pack()
+    label_pizza_percentage.pack()
+    label_like_to_eat_out.pack()
 
     # Create the OK button to return to the main menu
-    button_ok = tk.Button(content_frame, text="OK", command=create_data_entry_screen)
+    button_ok = tk.Button(content_frame, text="OK",
+                          command=create_data_entry_screen)
     button_ok.pack()
 
     # Apply styles
     apply_styles()
 
-#-------------------------------------------------------------------------------------------------------------
+
+
 def clear_content_frame():
     # Clear the content frame
     for child in content_frame.winfo_children():
