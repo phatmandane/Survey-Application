@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
+#By Phathu Mandane
 import tkinter as tk
+from tkinter import messagebox
 import sqlite3
+from tkcalendar import DateEntry
 
 # Create the database connection
-conn = sqlite3.connect("survey.db")
+conn = sqlite3.connect("survey_data.db")
 cursor = conn.cursor()
 
 # Create the survey_data table if it doesn't exist
@@ -22,7 +25,7 @@ cursor.execute("""
 
 # Create the main window
 root = tk.Tk()
-root.title("Survey App by Phathu Mandane")
+root.title("Survey App")
 
 # Create a frame to hold the content
 content_frame = tk.Frame(root)
@@ -36,8 +39,42 @@ entry_age = None
 var_food = None
 rating_table = []
 
-# Functions
+# Styling constants
+BG_COLOR = "#F7F7F7"
+FONT_FAMILY = "Arial"
+FONT_SIZE = 12
+BUTTON_WIDTH = 20
+BUTTON_HEIGHT = 2
 
+# Set the background color
+root.config(bg=BG_COLOR)
+content_frame.config(bg=BG_COLOR)
+#------------------------------------------------------------------------------------------------------------------
+
+def apply_styles():
+    # Style for labels
+    label_style = {"font": (FONT_FAMILY, FONT_SIZE), "bg": BG_COLOR}
+
+    # Style for buttons
+    button_style = {
+        "font": (FONT_FAMILY, FONT_SIZE),
+        "bg": "#4CAF50",
+        "fg": "white",
+        "relief": tk.RAISED,
+        "width": BUTTON_WIDTH,
+        "height": BUTTON_HEIGHT,
+    }
+
+    # Apply styles to labels
+    for label in content_frame.winfo_children():
+        if isinstance(label, tk.Label):
+            label.config(label_style)
+
+    # Apply styles to buttons
+    for button in content_frame.winfo_children():
+        if isinstance(button, tk.Button):
+            button.config(button_style)
+#-----------------------------------------------------------------------------------------------------------------
 
 def create_data_entry_screen():
     # Clear the content frame
@@ -45,19 +82,23 @@ def create_data_entry_screen():
 
     # Create Fill out survey button
     button_fill_survey = tk.Button(
-        content_frame, text="Fill out survey", command=fill_out_survey)
+        content_frame,
+        text="Fill out survey",
+        command=fill_out_survey,
+    )
     button_fill_survey.pack()
 
     # Create View survey results button
     button_view_results = tk.Button(
-        content_frame, text="View survey results", command=view_survey_results)
+        content_frame,
+        text="View survey results",
+        command=view_survey_results,
+    )
     button_view_results.pack()
 
-
-def clear_content_frame():
-    for widget in content_frame.winfo_children():
-        widget.pack_forget()
-
+    # Apply styles
+    apply_styles()
+#-----------------------------------------------------------------------------------------------------------------
 
 def fill_out_survey():
     # Clear the content frame
@@ -67,7 +108,7 @@ def fill_out_survey():
     label_date = tk.Label(content_frame, text="Date:")
     label_date.pack()
     global entry_date
-    entry_date = tk.Entry(content_frame)
+    entry_date = DateEntry(content_frame, date_pattern="yyyy-mm-dd")
     entry_date.pack()
 
     label_first_name = tk.Label(content_frame, text="First Name:")
@@ -93,7 +134,6 @@ def fill_out_survey():
 
     global var_food
     var_food = tk.StringVar()
-    
     food_options = [
         ("Pizza", "Pizza"),
         ("Pasta", "Pasta"),
@@ -105,7 +145,7 @@ def fill_out_survey():
     food_frame = tk.Frame(content_frame)
     food_frame.pack()
 
-    for index, (text, value) in enumerate(food_options):
+    for i, (text, value) in enumerate(food_options):
         radio_button = tk.Radiobutton(
             food_frame, text=text, variable=var_food, value=value)
         radio_button.pack(anchor="w")
@@ -121,6 +161,7 @@ def fill_out_survey():
     # Table headers
     headers = ["Strongly Disagree(1)", "Disagree(2)",
                "Neutral(3)", "Agree(4)", "Strongly Agree(5)"]
+
     for col, header in enumerate(headers):
         label_header = tk.Label(table_frame, text=header, padx=10, pady=5)
         label_header.grid(row=0, column=col+1)
@@ -150,110 +191,126 @@ def fill_out_survey():
         rating_table.append(row_ratings)
 
     # Create the Save button
-    button_save = tk.Button(content_frame, text="Save", command=save_data)
+    button_save = tk.Button(content_frame, text="Save", command=submit_survey)
     button_save.pack()
 
+    apply_styles()
+#---------------------------------------------------------------------------------------------------------------
 
-def save_data():
-    # Get the entered data
-    date = entry_date.get()
-    first_name = entry_first_name.get()
-    last_name = entry_last_name.get()
-    age = entry_age.get()
-    food = var_food.get()
+def submit_survey():
+    # Validate fields
+    if not validate_fields():
+        return
 
     # Get the selected ratings
-    ratings = []
-    for row in rating_table:
-        row_ratings = [rating.get() for rating in row]
-        ratings.append(row_ratings)
+    ratings = [int(rating.get()) for row in rating_table for rating in row]
 
-    # Save the data to the database
-    cursor.execute("INSERT INTO survey_data (date, first_name, last_name, age, food, rating_1, rating_2, rating_3, rating_4, rating_5) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                   (date, first_name, last_name, age, food, *ratings))
+    # Insert the survey data into the database
+    cursor.execute(
+        "INSERT INTO survey_data (date, first_name, last_name, age, food, rating) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            entry_date.get(),
+            entry_first_name.get(),
+            entry_last_name.get(),
+            int(entry_age.get()),
+            var_food.get(),
+            sum(ratings) / len(ratings),
+        ),
+    )
     conn.commit()
 
-    # Clear the entry fields
-    entry_date.delete(0, tk.END)
-    entry_first_name.delete(0, tk.END)
-    entry_last_name.delete(0, tk.END)
-    entry_age.delete(0, tk.END)
-    var_food.set("")  # Unselect the food option
-    for row in rating_table:
-        for rating in row:
-            rating.set(0)  # Unselect the ratings
+    # Show success message
+    messagebox.showinfo("Success", "Survey submitted successfully.")
 
-    # Redirect to the "View Survey Results" screen
-    view_survey_results()
+    # Clear the fields
+    clear_fields()
 
+#---------------------------------------------------------------------------------------------------------------
 
+def validate_fields():
+    if not entry_date.get() or not entry_first_name.get() or not entry_last_name.get() or not entry_age.get():
+        messagebox.showerror("Error", "Please fill out all fields.")
+        return False
 
-    
+    if int(entry_age.get()) < 5 or int(entry_age.get()) > 120:
+        messagebox.showerror("Error", "Please enter a valid age (5-120).")
+        return False
 
+    if var_food.get() == "":
+        messagebox.showerror("Error", "Please select your favorite food.")
+        return False
+
+    for row_ratings in rating_table:
+        if sum(rating.get() != 0 for rating in row_ratings) != 1:
+            messagebox.showerror("Error", "Please rate one statement in the table.")
+            return False
+
+    return True
+
+#---------------------------------------------------------------------------------------------------------------------
 
 def view_survey_results():
     # Clear the content frame
     clear_content_frame()
 
-    # Execute SQL queries to calculate results
-    cursor.execute("SELECT COUNT(*) FROM survey_data")
-    total_surveys = cursor.fetchone()[0]
+    # Fetch survey data from the database
+    cursor.execute("SELECT * FROM survey_data")
+    survey_data = cursor.fetchall()
 
-    cursor.execute("SELECT AVG(age) FROM survey_data")
-    avg_age = cursor.fetchone()[0]
+    if not survey_data:
+        messagebox.showinfo("No Data", "No survey data available.")
+        create_data_entry_screen()  # Return to the main menu
+        return
 
-    cursor.execute("SELECT MAX(age) FROM survey_data")
-    oldest_age = cursor.fetchone()[0]
+    # Calculate the statistics
+    total_surveys = len(survey_data)
+    average_age = sum(data[4] for data in survey_data) / total_surveys
+    oldest_age = max(data[4] for data in survey_data)
+    youngest_age = min(data[4] for data in survey_data)
+    pizza_lovers = sum(data[5] == "Pizza" for data in survey_data)
+    pizza_percentage = (pizza_lovers / total_surveys) * 100
+    like_to_eat_out_rating = sum(data[6] for data in survey_data) / total_surveys
 
-    cursor.execute("SELECT MIN(age) FROM survey_data")
-    youngest_age = cursor.fetchone()[0]
+    # Display the statistics
+    text = f"Total Surveys: {total_surveys}\n"
+    text += f"Average Age: {average_age:.1f}\n"
+    text += f"Oldest Person: {oldest_age}\n"
+    text += f"Youngest Person: {youngest_age}\n"
+    text += f"Percentage of People who like Pizza: {pizza_percentage:.1f}%\n"
+    text += f"People who like to eat out: {like_to_eat_out_rating:.1f}\n"
 
-    cursor.execute("SELECT COUNT(*) FROM survey_data WHERE food = 'Pizza'")
-    pizza_count = cursor.fetchone()[0]
-    percentage_pizza = (pizza_count / total_surveys) * 100
-
-    cursor.execute("SELECT AVG(rating) FROM survey_data")
-    avg_rating = cursor.fetchone()[0]
-
-    # Display the calculated results
-    label_total_surveys = tk.Label(
-        content_frame, text="Total Surveys: {}".format(total_surveys))
-    label_total_surveys.pack()
-
-    label_avg_age = tk.Label(
-        content_frame, text="Average Age: {:.1f}".format(avg_age))
-    label_avg_age.pack()
-
-    label_oldest_age = tk.Label(
-        content_frame, text="Oldest Age: {}".format(oldest_age))
-    label_oldest_age.pack()
-
-    label_youngest_age = tk.Label(
-        content_frame, text="Youngest Age: {}".format(youngest_age))
-    label_youngest_age.pack()
-
-    label_percentage_pizza = tk.Label(
-        content_frame, text="Percentage of People Who Like Pizza: {:.1f}%".format(percentage_pizza))
-    label_percentage_pizza.pack()
-
-    label_avg_rating = tk.Label(
-        content_frame, text="Average Rating: {:.1f}".format(avg_rating))
-    label_avg_rating.pack()
+    # Create a text box to display the statistics
+    text_box = tk.Text(content_frame, bg="white", width=60, height=20)
+    text_box.insert(tk.END, text)
+    text_box.pack()
 
     # Create the OK button to return to the main menu
-    button_ok = tk.Button(content_frame, text="OK",
-                          command=create_data_entry_screen)
+    button_ok = tk.Button(content_frame, text="OK", command=create_data_entry_screen)
     button_ok.pack()
 
+    # Apply styles
+    apply_styles()
 
-# Initial UI setup
+#-------------------------------------------------------------------------------------------------------------
+def clear_content_frame():
+    # Clear the content frame
+    for child in content_frame.winfo_children():
+        child.destroy()
+
+#-------------------------------------------------------------------------------------------------------------
+def clear_fields():
+    # Clear the entry fields
+    entry_date.delete(0, tk.END)
+    entry_first_name.delete(0, tk.END)
+    entry_last_name.delete(0, tk.END)
+    entry_age.delete(0, tk.END)
+    var_food.set("")
+
+
+# Create the initial data entry screen
 create_data_entry_screen()
 
-# Configure window to adapt with resolution
-root.rowconfigure(0, weight=1)
-root.columnconfigure(0, weight=1)
-
-# Start the Tkinter event loop
+# Start the main event loop
 root.mainloop()
 
 # Close the database connection
